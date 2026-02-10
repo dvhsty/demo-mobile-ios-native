@@ -7,6 +7,7 @@ struct Login: View {
     @EnvironmentObject var session: Session
     @EnvironmentObject var scrollManager: ScrollManager
     @EnvironmentObject var focusManager: FocusManager
+    @EnvironmentObject var errorReporingService: ErrorReportingService
 
     @State private var audiences: String = ""
 
@@ -50,7 +51,7 @@ struct Login: View {
                             Button("Login") {
                                 Task {
                                     self.error = nil
-                                    await nativeSDK.login(
+                                    try? await nativeSDK.login(
                                         parameters: LoginParameters(
                                             audiences: audiences.split(
                                                 separator: " ",
@@ -59,6 +60,7 @@ struct Login: View {
                                         ),
                                         onSuccess: {},
                                         onError: { err in
+                                            errorReporingService.handle(error: err)
                                             switch err {
                                             case NativeSDKError.oidcError(
                                                 error: _,

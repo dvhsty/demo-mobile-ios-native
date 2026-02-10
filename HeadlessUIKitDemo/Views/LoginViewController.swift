@@ -21,26 +21,26 @@ class LoginViewController: UIViewController, HeadlessAdapterDelegate {
                 onSuccess: {
                     let mainViewController = MainViewController(nibName: "MainViewController", bundle: nil)
                     mainViewController.nativeSDK = self.nativeSDK
-
+                    
                     self.navigationController?.setViewControllers([mainViewController], animated: true)
                 },
                 onError: { err in
                     Task { @MainActor in
                         let landingViewController = LandingViewController(nibName: "LandingViewController", bundle: nil)
                         landingViewController.nativeSDK = self.nativeSDK
-
+                        
                         landingViewController.loginError =
-                            switch err {
-                            case let NativeSDKError.oidcError(error: _, errorDescription: errorDescription):
-                                errorDescription
-                            case NativeSDKError.hostedFlowCanceled:
-                                "Hosted login canceled"
-                            case NativeSDKError.sessionExpired:
-                                "Session expired"
-                            default:
-                                "N/A"
-                            }
-
+                        switch err {
+                        case let NativeSDKError.oidcError(error: _, errorDescription: errorDescription):
+                            errorDescription
+                        case NativeSDKError.hostedFlowCanceled:
+                            "Hosted login canceled"
+                        case NativeSDKError.sessionExpired:
+                            "Session expired"
+                        default:
+                            "N/A"
+                        }
+                        
                         self.navigationController?.setViewControllers([landingViewController], animated: true)
                     }
                 }

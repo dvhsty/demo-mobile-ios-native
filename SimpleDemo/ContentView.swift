@@ -3,7 +3,7 @@ import SdkMobileIOSNative
 
 struct ContentView: View {
     var nativeSDK: NativeSDK
-
+    
     @State var loading: Bool = true
     @ObservedObject var session: Session
     @State var error: String?
@@ -19,7 +19,7 @@ struct ContentView: View {
 
         session = nativeSDK.session
     }
-
+    
     var body: some View {
         VStack {
             if loading {
@@ -69,29 +69,33 @@ struct ContentView: View {
                     Button("Login") {
                         Task {
                             self.error = nil
-                            await nativeSDK.login(
-                                parameters: LoginParameters(
-                                    scopes: ["openid", "profile", "offline"],
-                                    prefersEphemeralWebBrowserSession: true
-                                ),
-                                onSuccess: {
-                                    print("Login successulf")
-                                },
-                                onError: { err in
-                                    print("Login failed: \(err.localizedDescription)")
-                                    switch err {
-                                    case let NativeSDKError.oidcError(error: _, errorDescription: errorDescription):
-                                        self.error = errorDescription
-                                    case NativeSDKError.hostedFlowCanceled:
-                                        self.error = "Hosted login canceled"
-                                    case NativeSDKError.sessionExpired:
-                                        self.error = "Session expired"
-                                    default:
-                                        print(err)
-                                        self.error = "N/A"
+                            do {
+                                try await nativeSDK.login(
+                                    parameters: LoginParameters(
+                                        scopes: ["openid", "profile", "offline"],
+                                        prefersEphemeralWebBrowserSession: true
+                                    ),
+                                    onSuccess: {
+                                        print("Login successulf")
+                                    },
+                                    onError: { err in
+                                        print("Login failed: \(err.localizedDescription)")
+                                        switch err {
+                                        case let NativeSDKError.oidcError(error: _, errorDescription: errorDescription):
+                                            self.error = errorDescription
+                                        case NativeSDKError.hostedFlowCanceled:
+                                            self.error = "Hosted login canceled"
+                                        case NativeSDKError.sessionExpired:
+                                            self.error = "Session expired"
+                                        default:
+                                            print(err)
+                                            self.error = "N/A"
+                                        }
                                     }
-                                }
-                            )
+                                )
+                            } catch {
+                                print("Could not login: \(error)")
+                            }
                         }
                     }
                     if let error = error {

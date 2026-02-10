@@ -9,6 +9,7 @@ struct ContentView: View {
     @ObservedObject var session: Session
     @ObservedObject var scrollManager = ScrollManager()
     @ObservedObject var focusManager = FocusManager()
+    @ObservedObject var errorReportingService = ErrorReportingService()
 
     init() {
         nativeSDK = NativeSDK(
@@ -33,14 +34,78 @@ struct ContentView: View {
                     .environmentObject(session)
                     .environmentObject(scrollManager)
                     .environmentObject(focusManager)
+                    .environmentObject(errorReportingService)
 
                 Text("Footer")
             }
         }
+        .modifier(ErrorReportingModifier(reporter: errorReportingService))
         .onAppear {
             Task {
-                try await nativeSDK.initializeSession()
-                loading = false
+                do {
+                    try await nativeSDK.initializeSession()
+                    loading = false
+                } catch {
+                    errorReportingService.handle(error: error)
+                }
+            }
+        }
+    }
+}
+
+class ErrorReportingService: ObservableObject {
+    @Published private(set) var reportedError: Error?
+
+    func handle(error: Error) {
+        print(error)
+        Task { @MainActor in
+            self.reportedError = error
+        }
+    }
+
+    func dismiss() {
+        reportedError = nil
+    }
+}
+
+struct ErrorReportingModifier: ViewModifier {
+
+    @ObservedObject var reporter: ErrorReportingService
+
+    func body(content: Content) -> some View {
+
+        ZStack {
+            content
+
+            if let reportedError = reporter.reportedError {
+                // The "Oops" Screen
+                VStack(spacing: 20) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.system(size: 50))
+                        .foregroundColor(.orange)
+
+                    Text("Ooops, something went wrong")
+                        .font(.headline)
+
+                    Text(reportedError.localizedDescription)
+                        .multilineTextAlignment(.center)
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+
+                    Text("Tracking ID: \(UUID().uuidString)")
+                        .font(.caption)
+
+                    Button("Got it") {
+                        reporter.dismiss()
+                    }
+                    .buttonStyle(.borderedProminent)
+                }
+                .padding(30)
+                .background(.ultraThinMaterial)
+                .cornerRadius(20)
+                .shadow(radius: 10)
+                .transition(.scale.combined(with: .opacity))
+                .zIndex(1)
             }
         }
     }
